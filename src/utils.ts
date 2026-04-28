@@ -39,3 +39,15 @@ export function compareStringRecord(
   }
   return true;
 }
+
+export function isDesiredConfigSatisfied(
+  current: Record<string, string> | undefined,
+  desired: Record<string, string> | undefined
+): boolean {
+  const desiredEntries = Object.entries(desired ?? {});
+  if (desiredEntries.length === 0) {
+    return true;
+  }
+  const currentRecord = current ?? {};
+  return desiredEntries.every(([key, value]) => currentRecord[key] === value);
+}

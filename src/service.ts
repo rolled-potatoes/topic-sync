@@ -13,7 +13,7 @@ import {
 } from "./planner";
 import { SchemaRegistryProvider } from "./schemaRegistry";
 import type { PlanResult } from "./types";
-import { isProdEnv } from "./utils";
+import { isDesiredConfigSatisfied, isProdEnv } from "./utils";
 
 export interface PlanCommandOptions {
   config?: string;
@@ -273,10 +273,7 @@ async function applyTopics(
       }
       const desiredConfig = desired.spec.config ?? {};
       const currentConfig = current.config ?? {};
-      const changed = Object.keys(desiredConfig).some(
-        (key) => currentConfig[key] !== desiredConfig[key]
-      );
-      if (!changed) {
+      if (isDesiredConfigSatisfied(currentConfig, desiredConfig)) {
         return undefined;
       }
       return { name: item.name, config: desiredConfig };

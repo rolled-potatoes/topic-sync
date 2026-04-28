@@ -8,7 +8,7 @@ import type {
   TopicManifest,
   TopicPlanItem
 } from "./types";
-import { compareStringRecord } from "./utils";
+import { isDesiredConfigSatisfied } from "./utils";
 
 export interface TopicRuntimeState {
   partitions: number;
@@ -97,7 +97,7 @@ export function createPlan(input: PlanInput): PlannedResources {
       continue;
     }
 
-    if (!compareStringRecord(current.config, topicTarget.spec.config)) {
+    if (!isDesiredConfigSatisfied(current.config, topicTarget.spec.config)) {
       topicPlan.push({ name: topicName, action: "update", reason: "Topic config differs" });
       continue;
     }

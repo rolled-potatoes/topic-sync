@@ -2,7 +2,7 @@ import type { KrsyncManifest } from "./src";
 
 const config: KrsyncManifest = {
   kafka: {
-    brokers: ["localhost:9092"],
+    brokers: ["localhost:19092"],
     clientId: "krsync-example"
   },
   schemaRegistry: {
