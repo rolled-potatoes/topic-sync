@@ -1,4 +1,4 @@
-# kafka-registry-sync
+# @rolled-potatoes/kafka-registry-sync
 
 Kafka topic + Schema Registry sync package.
 
@@ -56,9 +56,18 @@ Minimal example is provided at `krsync.config.ts`.
 Install and consume either `import` or `require`.
 
 ```js
-const { buildTopicName } = require("kafka-registry-sync");
+const { buildTopicName } = require("@rolled-potatoes/kafka-registry-sync");
 ```
 
 ```js
-import { buildTopicName } from "kafka-registry-sync";
+import { buildTopicName } from "@rolled-potatoes/kafka-registry-sync";
+```
+
+## Publish to GitHub Packages
+
+Set token and publish:
+
+```bash
+export NODE_AUTH_TOKEN=<github_pat_with_packages_write>
+npm run publish:github
 ```

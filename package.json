@@ -1,8 +1,16 @@
 {
-  "name": "kafka-registry-sync",
+  "name": "@rolled-potatoes/kafka-registry-sync",
   "version": "0.1.0",
   "description": "Kafka topic and schema registry sync toolkit",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rolled-potatoes/topic-sync.git"
+  },
+  "homepage": "https://github.com/rolled-potatoes/topic-sync#readme",
+  "bugs": {
+    "url": "https://github.com/rolled-potatoes/topic-sync/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -15,15 +23,20 @@
     }
   },
   "bin": {
-    "krsync": "./dist/cli.cjs"
+    "krsync": "dist/cli.cjs"
   },
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run typecheck",
+    "publish:github": "npm publish"
   },
   "dependencies": {
     "commander": "^12.1.0",
