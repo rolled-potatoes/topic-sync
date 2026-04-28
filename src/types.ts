@@ -1,0 +1,72 @@
+export type CompatibilityLevel =
+  | "NONE"
+  | "BACKWARD"
+  | "BACKWARD_TRANSITIVE"
+  | "FORWARD"
+  | "FORWARD_TRANSITIVE"
+  | "FULL"
+  | "FULL_TRANSITIVE";
+
+export interface TopicManifest {
+  project: string;
+  service: string;
+  subservices?: string[];
+  partitions: number;
+  replicationFactor: number;
+  config?: Record<string, string>;
+}
+
+export interface SchemaManifest {
+  topicRef: string;
+  avro?: string;
+  avroFile?: string;
+  compatibility?: CompatibilityLevel;
+}
+
+export interface ConsumerManifest {
+  action: string;
+}
+
+export interface KrsyncManifest {
+  tenant?: string;
+  env?: string;
+  kafka?: {
+    brokers: string[];
+    clientId?: string;
+  };
+  schemaRegistry?: {
+    url: string;
+    auth?: {
+      username: string;
+      password: string;
+    };
+  };
+  defaults?: {
+    compatibility?: CompatibilityLevel;
+  };
+  topics: TopicManifest[];
+  schemas?: SchemaManifest[];
+  consumers?: ConsumerManifest[];
+}
+
+export interface RuntimeScope {
+  tenant: string;
+  env: string;
+}
+
+export interface TopicPlanItem {
+  name: string;
+  action: "create" | "update" | "noop" | "delete";
+  reason: string;
+}
+
+export interface SchemaPlanItem {
+  subject: string;
+  action: "create" | "update" | "noop" | "delete";
+  reason: string;
+}
+
+export interface PlanResult {
+  topics: TopicPlanItem[];
+  schemas: SchemaPlanItem[];
+}
