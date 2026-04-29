@@ -295,11 +295,13 @@ krsync status [-c <경로>]
 
 ## 프로그래밍 API
 
-`planCommand`, `syncCommand`, `validateCommand`, `statusCommand`를 Node.js 코드에서 직접 사용할 수 있습니다.
+`planCommand`, `syncCommand`, `validateCommand`, `statusCommand`, `loadTopicCatalog`, `explainDrift`를 Node.js 코드에서 직접 사용할 수 있습니다.
 
 ```ts
 // ESM
 import {
+  explainDrift,
+  loadTopicCatalog,
   planCommand,
   syncCommand,
   validateCommand,
@@ -310,6 +312,20 @@ import {
 ```js
 // CommonJS
 const { planCommand, syncCommand } = require("@rolled-potatoes/kafka-registry-sync");
+```
+
+### `loadTopicCatalog(options?)`
+
+manifest의 `topics`를 기준으로 서비스에서 바로 사용할 수 있는 카탈로그를 생성합니다.
+
+```ts
+const catalog = await loadTopicCatalog({
+  config: "./krsync.config.ts", // 선택
+});
+
+const topicByRef = catalog.byRef["platform.orders.events.v1"];
+const topicByName = catalog.byName[topicByRef.name];
+// topicByRef와 topicByName은 같은 토픽 엔트리를 가리킵니다.
 ```
 
 ### `planCommand(options?)`
@@ -357,6 +373,17 @@ interface SchemaPlanItem {
   action: "create" | "update" | "noop" | "delete";
   reason: string;
 }
+```
+
+### `explainDrift(plan)`
+
+`PlanResult`에서 `noop` 항목을 제외한 drift 항목만 분리해 운영 점검에 활용할 수 있습니다.
+
+```ts
+const plan = await planCommand({ allowDelete: false });
+const drift = explainDrift(plan);
+
+// drift.topicDrift / drift.schemaDrift
 ```
 
 ---
@@ -409,6 +436,11 @@ bootstrap().catch((err) => {
 | `KRSYNC_CONFIG_PATH`        | 설정 파일 경로 지정               |
 
 ---
+
+## 변경 호환성 메모
+
+- 이번 변경은 additive export만 포함합니다. 기존 `planCommand`/`syncCommand`/`validateCommand`/`statusCommand` 시그니처와 동작은 유지됩니다.
+- 신규 API(`loadTopicCatalog`, `explainDrift`, `createTopicCatalog`)는 선택적으로 도입할 수 있으며 기존 코드 수정 없이 업그레이드 가능합니다.
 
 ## 로컬 개발 환경 (Docker)
 

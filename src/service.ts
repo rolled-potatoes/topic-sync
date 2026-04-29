@@ -12,7 +12,8 @@ import {
   type TopicRuntimeState
 } from "./planner";
 import { SchemaRegistryProvider } from "./schemaRegistry";
-import type { PlanResult } from "./types";
+import { createTopicCatalog } from "./topicCatalog";
+import type { PlanResult, ServiceTopicCatalog } from "./types";
 import { isDesiredConfigSatisfied, isProdEnv } from "./utils";
 
 export interface PlanCommandOptions {
@@ -139,6 +140,55 @@ export async function statusCommand(configPath?: string): Promise<{
   ).length;
 
   return { topicCount, subjectCount };
+}
+
+export async function loadTopicCatalog(
+  options: { config?: string } = {}
+): Promise<ServiceTopicCatalog> {
+  const loaded = await loadManifest(options.config);
+  return createTopicCatalog(loaded.manifest, loaded.scope);
+}
+
+export function explainDrift(plan: PlanResult): {
+  topicDrift: Array<{ name: string; action: "create" | "update" | "delete"; reason: string }>;
+  schemaDrift: Array<{
+    subject: string;
+    action: "create" | "update" | "delete";
+    reason: string;
+  }>;
+} {
+  const topicDrift: Array<{ name: string; action: "create" | "update" | "delete"; reason: string }> = [];
+  for (const item of plan.topics) {
+    if (item.action === "noop") {
+      continue;
+    }
+    topicDrift.push({
+      name: item.name,
+      action: item.action,
+      reason: item.reason
+    });
+  }
+
+  const schemaDrift: Array<{
+    subject: string;
+    action: "create" | "update" | "delete";
+    reason: string;
+  }> = [];
+  for (const item of plan.schemas) {
+    if (item.action === "noop") {
+      continue;
+    }
+    schemaDrift.push({
+      subject: item.subject,
+      action: item.action,
+      reason: item.reason
+    });
+  }
+
+  return {
+    topicDrift,
+    schemaDrift
+  };
 }
 
 function createProviders(manifest: Awaited<ReturnType<typeof loadManifest>>["manifest"]): {

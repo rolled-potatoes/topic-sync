@@ -75,7 +75,11 @@ export function createPlan(input: PlanInput): PlannedResources {
   for (const [topicName, topicTarget] of input.desiredTopics) {
     const current = input.currentTopics.get(topicName);
     if (!current) {
-      topicPlan.push({ name: topicName, action: "create", reason: "Topic missing" });
+      topicPlan.push({
+        name: topicName,
+        action: "create",
+        reason: "Missing in runtime; create topic from manifest"
+      });
       continue;
     }
 
@@ -83,7 +87,7 @@ export function createPlan(input: PlanInput): PlannedResources {
       topicPlan.push({
         name: topicName,
         action: "update",
-        reason: `Increase partitions ${current.partitions} -> ${topicTarget.spec.partitions}`
+        reason: `Runtime partitions lower than desired (${current.partitions} -> ${topicTarget.spec.partitions}); increase required`
       });
       continue;
     }
@@ -92,17 +96,21 @@ export function createPlan(input: PlanInput): PlannedResources {
       topicPlan.push({
         name: topicName,
         action: "update",
-        reason: `Current partitions ${current.partitions} exceed desired ${topicTarget.spec.partitions}; decrease skipped`
+        reason: `Runtime partitions exceed desired (${current.partitions} > ${topicTarget.spec.partitions}); decrease is not auto-applied`
       });
       continue;
     }
 
     if (!isDesiredConfigSatisfied(current.config, topicTarget.spec.config)) {
-      topicPlan.push({ name: topicName, action: "update", reason: "Topic config differs" });
+      topicPlan.push({
+        name: topicName,
+        action: "update",
+        reason: "Runtime config differs from manifest config; update required"
+      });
       continue;
     }
 
-    topicPlan.push({ name: topicName, action: "noop", reason: "Already aligned" });
+    topicPlan.push({ name: topicName, action: "noop", reason: "Aligned with manifest" });
   }
 
   if (input.includeDeletes) {
@@ -114,7 +122,7 @@ export function createPlan(input: PlanInput): PlannedResources {
         topicPlan.push({
           name: currentTopicName,
           action: "delete",
-          reason: "Exists in scope but missing in manifest"
+          reason: "Present in runtime scope but absent in manifest; delete candidate"
         });
       }
     }
@@ -123,12 +131,20 @@ export function createPlan(input: PlanInput): PlannedResources {
   for (const [subject, desired] of input.desiredSchemas) {
     const current = input.currentSchemas.get(subject);
     if (!current) {
-      schemaPlan.push({ subject, action: "create", reason: "Subject missing" });
+      schemaPlan.push({
+        subject,
+        action: "create",
+        reason: "Missing in runtime; create subject from manifest"
+      });
       continue;
     }
 
     if (normalizeJson(current.schema) !== normalizeJson(desired.schema)) {
-      schemaPlan.push({ subject, action: "update", reason: "Schema content differs" });
+      schemaPlan.push({
+        subject,
+        action: "update",
+        reason: "Runtime schema differs from manifest schema; update required"
+      });
       continue;
     }
 
@@ -136,12 +152,12 @@ export function createPlan(input: PlanInput): PlannedResources {
       schemaPlan.push({
         subject,
         action: "update",
-        reason: `Compatibility ${current.compatibility ?? "undefined"} -> ${desired.compatibility}`
+        reason: `Compatibility differs (${current.compatibility ?? "undefined"} -> ${desired.compatibility}); update required`
       });
       continue;
     }
 
-    schemaPlan.push({ subject, action: "noop", reason: "Already aligned" });
+    schemaPlan.push({ subject, action: "noop", reason: "Aligned with manifest" });
   }
 
   if (input.includeDeletes) {
@@ -150,13 +166,13 @@ export function createPlan(input: PlanInput): PlannedResources {
         continue;
       }
       if (!input.desiredSchemas.has(currentSubject)) {
-        schemaPlan.push({
-          subject: currentSubject,
-          action: "delete",
-          reason: "Exists in scope but missing in manifest"
-        });
+          schemaPlan.push({
+            subject: currentSubject,
+            action: "delete",
+            reason: "Present in runtime scope but absent in manifest; delete candidate"
+          });
+        }
       }
-    }
   }
 
   return { plan: { topics: topicPlan, schemas: schemaPlan } };

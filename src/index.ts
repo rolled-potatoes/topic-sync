@@ -1,4 +1,6 @@
 export {
+  explainDrift,
+  loadTopicCatalog,
   planCommand,
   statusCommand,
   syncCommand,
@@ -6,6 +8,10 @@ export {
   type PlanCommandOptions,
   type SyncCommandOptions
 } from "./service";
+
+export {
+  createTopicCatalog
+} from "./topicCatalog";
 
 export {
   buildGroupId,
@@ -35,11 +41,13 @@ export {
 export type { KafkaTopicState } from "./kafka";
 
 export type {
+  CatalogTopicItem,
   CompatibilityLevel,
   ConsumerManifest,
   KrsyncManifest,
   PlanResult,
   RuntimeScope,
+  ServiceTopicCatalog,
   SchemaManifest,
   SchemaPlanItem,
   TopicManifest,

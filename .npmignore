@@ -1,7 +1,7 @@
-dist
-
-node_modules
-build
+src/
+specs/
+schemas/
+node_modules/
 *.log
 .env*
 .DS_Store

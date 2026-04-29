@@ -1,5 +1,7 @@
 import { Command } from "commander";
 import {
+  explainDrift,
+  loadTopicCatalog,
   planCommand,
   statusCommand,
   syncCommand,
@@ -20,12 +22,24 @@ program
   });
 
 program
+  .command("catalog")
+  .option("-c, --config <path>", "Path to krsync config")
+  .action(async (options: { config?: string }) => {
+    const catalog = await loadTopicCatalog(options);
+    console.log(`Scope: ${catalog.scope.tenant}.${catalog.scope.env}`);
+    for (const item of catalog.list) {
+      console.log(`  - ${item.ref} => ${item.name}`);
+    }
+  });
+
+program
   .command("plan")
   .option("-c, --config <path>", "Path to krsync config")
   .option("--allow-delete", "Include delete actions", false)
   .action(async (options: { config?: string; allowDelete?: boolean }) => {
     const plan = await planCommand(options);
     printPlan(plan);
+    printDriftSummary(plan);
   });
 
 program
@@ -36,6 +50,7 @@ program
   .action(async (options: { config?: string; allowDelete?: boolean; confirm?: string }) => {
     const plan = await syncCommand(options);
     printPlan(plan);
+    printDriftSummary(plan);
     console.log("Sync completed.");
   });
 
@@ -63,4 +78,11 @@ function printPlan(plan: PlanResult): void {
   for (const item of plan.schemas) {
     console.log(`  - [${item.action}] ${item.subject} (${item.reason})`);
   }
+}
+
+function printDriftSummary(plan: PlanResult): void {
+  const drift = explainDrift(plan);
+  console.log(
+    `Drift summary: topics=${drift.topicDrift.length}, schemas=${drift.schemaDrift.length}`
+  );
 }

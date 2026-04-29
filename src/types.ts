@@ -54,6 +54,21 @@ export interface RuntimeScope {
   env: string;
 }
 
+export interface CatalogTopicItem {
+  ref: string;
+  name: string;
+  partitions: number;
+  replicationFactor: number;
+  config: Record<string, string>;
+}
+
+export interface ServiceTopicCatalog {
+  scope: RuntimeScope;
+  byRef: Record<string, CatalogTopicItem>;
+  byName: Record<string, CatalogTopicItem>;
+  list: CatalogTopicItem[];
+}
+
 export interface TopicPlanItem {
   name: string;
   action: "create" | "update" | "noop" | "delete";
