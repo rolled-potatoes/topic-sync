@@ -475,16 +475,34 @@ KRS_TENANT=mycompany KRS_ENV=dev npx krsync sync
 
 패키지는 [GitHub Packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry)에 배포됩니다.
 
-**수동 배포:**
+**자동 배포 (CI):** `main` 브랜치에 커밋이 push(머지)되면 `.github/workflows/publish-github-packages.yml`이 실행됩니다.
 
-```bash
-export NODE_AUTH_TOKEN=<packages_write_권한의_github_pat>
-npm run publish:github
+- `npm ci` → `npm run prepublishOnly`(build + typecheck) 실행
+- `semantic-release`가 커밋 메시지를 분석해 다음 버전을 계산
+- Git 태그 생성, GitHub Release 생성, GitHub Packages 배포를 자동으로 수행
+
+### 커밋 메시지 규칙 (Conventional Commits)
+
+- `feat:` → minor 버전 증가
+- `fix:` → patch 버전 증가
+- `BREAKING CHANGE:` 또는 `!` 포함 커밋 → major 버전 증가
+
+예시:
+
+```text
+feat: add topic drift summary API
+fix: handle empty schema subjects
+feat!: drop legacy config loader
 ```
 
-**자동 배포 (CI):** `v*` 패턴의 태그를 push하면 `.github/workflows/publish-github-packages.yml`이 트리거되어 빌드·타입 체크 후 자동으로 배포됩니다.
+### 수동 점검 (배포 없이 계산 확인)
+
+아래 명령어로 다음 버전 계산 결과를 로컬에서 미리 확인할 수 있습니다.
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+npm run release:dry-run
 ```
+
+### 비상 수동 실행
+
+워크플로우에는 `workflow_dispatch`가 유지되어 있어 GitHub Actions 화면에서 수동 실행도 가능합니다.
