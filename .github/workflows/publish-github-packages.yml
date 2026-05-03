@@ -29,6 +29,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint commit messages
+        run: |
+          # semantic-release's own release commits contain [skip ci] — skip validation
+          # to avoid a chicken-and-egg situation where the tool's output fails its own rules.
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qF "[skip ci]"; then
+            echo "Release commit detected ([skip ci]), skipping commitlint."
+            exit 0
+          fi
+
+          # On the very first push to a branch, github.event.before is all zeros.
+          # Fall back to validating only the HEAD commit in that case.
+          FROM="${{ github.event.before }}"
+          if [ "$FROM" = "0000000000000000000000000000000000000000" ]; then
+            npx commitlint --from HEAD~1 --to HEAD --verbose
+          else
+            npx commitlint --from "$FROM" --to "${{ github.sha }}" --verbose
+          fi
+
       - name: Build and typecheck
         run: npm run prepublishOnly
 
