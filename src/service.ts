@@ -347,15 +347,37 @@ async function applySchemas(
   allowDelete: boolean
 ): Promise<void> {
   const upserts = plan.schemas.filter((item) => item.action === "create" || item.action === "update");
-  for (const item of upserts) {
-    const desired = desiredSchemas.get(item.subject);
-    if (!desired) {
-      continue;
-    }
-    await schemaRegistry.registerSchema(item.subject, desired.schema);
-    if (desired.compatibility) {
-      await schemaRegistry.updateCompatibility(item.subject, desired.compatibility);
-    }
+
+  // Run all schema upserts concurrently. Each schema is independent so a single
+  // failure must not block the others.
+  const results = await Promise.allSettled(
+    upserts.map(async (item) => {
+      const desired = desiredSchemas.get(item.subject);
+      if (!desired) {
+        return;
+      }
+      await schemaRegistry.registerSchema(item.subject, desired.schema);
+      if (desired.compatibility) {
+        await schemaRegistry.updateCompatibility(item.subject, desired.compatibility);
+      }
+    })
+  );
+
+  // Collect failures and surface them as an aggregate error so the caller can
+  // see which subjects failed without masking the others that succeeded.
+  const failures = results
+    .map((result, i) =>
+      result.status === "rejected"
+        ? { subject: upserts[i]?.subject ?? "(unknown)", reason: result.reason }
+        : null
+    )
+    .filter((f): f is { subject: string; reason: unknown } => f !== null);
+
+  if (failures.length > 0) {
+    const messages = failures.map(
+      (f) => `  - ${f.subject}: ${f.reason instanceof Error ? f.reason.message : String(f.reason)}`
+    );
+    throw new Error(`${failures.length} schema(s) failed to apply:\n${messages.join("\n")}`);
   }
 
   if (allowDelete) {

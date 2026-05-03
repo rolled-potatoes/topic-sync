@@ -1,4 +1,4 @@
-import { ConfigResourceTypes, Kafka } from "kafkajs";
+import { ConfigResourceTypes, Kafka, KafkaJSAggregateError, KafkaJSProtocolError } from "kafkajs";
 import type { TopicManifest } from "./types";
 
 export interface KafkaTopicState {
@@ -93,6 +93,17 @@ export class KafkaProvider {
           }))
         }))
       });
+    } catch (error) {
+      // Concurrent sync: if all topics already exist, treat as idempotent success.
+      if (
+        error instanceof KafkaJSAggregateError &&
+        error.errors.every(
+          (e) => e instanceof KafkaJSProtocolError && e.type === "TOPIC_ALREADY_EXISTS"
+        )
+      ) {
+        return;
+      }
+      throw error;
     } finally {
       await admin.disconnect();
     }
@@ -111,6 +122,12 @@ export class KafkaProvider {
           count: item.count
         }))
       });
+    } catch (error) {
+      // Concurrent sync: if partition count is already at target, treat as idempotent success.
+      if (error instanceof KafkaJSProtocolError && error.type === "INVALID_PARTITIONS") {
+        return;
+      }
+      throw error;
     } finally {
       await admin.disconnect();
     }
@@ -148,6 +165,12 @@ export class KafkaProvider {
           }))
         }))
       });
+    } catch (error) {
+      // Concurrent sync: if config is already at desired state, treat as idempotent success.
+      if (error instanceof KafkaJSProtocolError && error.type === "INVALID_CONFIG") {
+        return;
+      }
+      throw error;
     } finally {
       await admin.disconnect();
     }
