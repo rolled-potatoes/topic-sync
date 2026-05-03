@@ -1,4 +1,4 @@
-import { ConfigResourceTypes, Kafka, KafkaJSAggregateError, KafkaJSProtocolError } from "kafkajs";
+import { ConfigResourceTypes, Kafka, KafkaJSAggregateError, KafkaJSProtocolError, type KafkaConfig } from "kafkajs";
 import type { TopicManifest } from "./types";
 
 export interface KafkaTopicState {
@@ -7,19 +7,30 @@ export interface KafkaTopicState {
   config: Record<string, string>;
 }
 
-export interface KafkaClientConfig {
-  brokers: string[];
-  clientId?: string;
-}
+// brokers is required; all other kafkajs KafkaConfig options are supported.
+export type KafkaClientConfig = { brokers: string[] } & Omit<KafkaConfig, "brokers">;
 
 export class KafkaProvider {
   private readonly kafka: Kafka;
 
-  constructor(config: KafkaClientConfig) {
-    this.kafka = new Kafka({
-      brokers: config.brokers,
-      clientId: config.clientId ?? "krsync"
-    });
+  /**
+   * Accepts either:
+   * - A config object (`KafkaClientConfig`) — supports all kafkajs KafkaConfig
+   *   options: ssl, sasl, retry, timeouts, etc.
+   * - An already-constructed `Kafka` instance — the caller's instance is reused
+   *   as-is, so connection settings and authentication are fully controlled by
+   *   the host application.
+   */
+  constructor(configOrInstance: KafkaClientConfig | Kafka) {
+    if (configOrInstance instanceof Kafka) {
+      this.kafka = configOrInstance;
+    } else {
+      this.kafka = new Kafka({
+        ...configOrInstance,
+        brokers: configOrInstance.brokers,
+        clientId: configOrInstance.clientId ?? "krsync"
+      });
+    }
   }
 
   async listTopics(): Promise<string[]> {

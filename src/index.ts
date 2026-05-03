@@ -5,6 +5,7 @@ export {
   statusCommand,
   syncCommand,
   validateCommand,
+  type ExternalProviders,
   type PlanCommandOptions,
   type SyncCommandOptions
 } from "./service";
@@ -38,7 +39,7 @@ export {
   type TopicRuntimeState
 } from "./planner";
 
-export type { KafkaTopicState } from "./kafka";
+export type { KafkaClientConfig, KafkaTopicState } from "./kafka";
 
 export type {
   CatalogTopicItem,

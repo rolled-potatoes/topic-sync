@@ -1,3 +1,5 @@
+import type { KafkaConfig } from "kafkajs";
+
 export type CompatibilityLevel =
   | "NONE"
   | "BACKWARD"
@@ -30,10 +32,10 @@ export interface ConsumerManifest {
 export interface KrsyncManifest {
   tenant?: string;
   env?: string;
-  kafka?: {
-    brokers: string[];
-    clientId?: string;
-  };
+  // brokers is required when providing kafka config inline.
+  // All other KafkaConfig options (ssl, sasl, retry, timeouts, etc.) are
+  // passed through directly to the kafkajs Kafka constructor.
+  kafka?: { brokers: string[] } & Omit<KafkaConfig, "brokers">;
   schemaRegistry?: {
     url: string;
     auth?: {

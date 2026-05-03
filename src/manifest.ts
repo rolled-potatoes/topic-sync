@@ -48,6 +48,7 @@ const manifestSchema = z.object({
       brokers: z.array(z.string().min(1)).min(1),
       clientId: z.string().optional()
     })
+    .passthrough() // allow all kafkajs KafkaConfig options (ssl, sasl, retry, timeouts, etc.)
     .optional(),
   schemaRegistry: z
     .object({

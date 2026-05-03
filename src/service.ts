@@ -1,3 +1,4 @@
+import { Kafka } from "kafkajs";
 import { KafkaProvider } from "./kafka";
 import { loadManifest, readAvroSchema, resolveCompatibility } from "./manifest";
 import { buildGroupId } from "./naming";
@@ -16,9 +17,22 @@ import { createTopicCatalog } from "./topicCatalog";
 import type { PlanResult, ServiceTopicCatalog } from "./types";
 import { isDesiredConfigSatisfied, isProdEnv } from "./utils";
 
+export interface ExternalProviders {
+  /**
+   * An already-constructed kafkajs `Kafka` instance. When provided, the
+   * package reuses this instance instead of creating a new one from the
+   * manifest config. Useful when the host application manages its own
+   * connection lifecycle, SASL/SSL setup, or custom loggers.
+   *
+   * When set, `manifest.kafka` is not required.
+   */
+  kafka?: Kafka;
+}
+
 export interface PlanCommandOptions {
   config?: string;
   allowDelete?: boolean;
+  providers?: ExternalProviders;
 }
 
 export interface SyncCommandOptions extends PlanCommandOptions {
@@ -64,7 +78,7 @@ export async function planCommand(options: PlanCommandOptions): Promise<PlanResu
     desiredTopics
   );
 
-  const { kafka, schemaRegistry } = createProviders(loaded.manifest);
+  const { kafka, schemaRegistry } = createProviders(loaded.manifest, options.providers);
 
   const currentTopics = await loadTopicRuntimeState(kafka, desiredTopics, loaded.scope);
   const currentSchemas = await loadSchemaRuntimeState(schemaRegistry, loaded.scope);
@@ -96,7 +110,8 @@ export async function syncCommand(options: SyncCommandOptions): Promise<PlanResu
     desiredTopics
   );
 
-  const { kafka, schemaRegistry } = createProviders(loaded.manifest);
+  const { kafka, schemaRegistry } = createProviders(loaded.manifest, options.providers);
+
   const currentTopics = await loadTopicRuntimeState(kafka, desiredTopics, loaded.scope);
   const currentSchemas = await loadSchemaRuntimeState(schemaRegistry, loaded.scope);
 
@@ -120,12 +135,15 @@ export async function syncCommand(options: SyncCommandOptions): Promise<PlanResu
   return planned.plan;
 }
 
-export async function statusCommand(configPath?: string): Promise<{
+export async function statusCommand(
+  configPath?: string,
+  providers?: ExternalProviders
+): Promise<{
   topicCount: number;
   subjectCount: number;
 }> {
   const loaded = await loadManifest(configPath);
-  const { kafka, schemaRegistry } = createProviders(loaded.manifest);
+  const { kafka, schemaRegistry } = createProviders(loaded.manifest, providers);
 
   const topics = await kafka.listTopics();
   const subjects = await schemaRegistry.listSubjects();
@@ -191,18 +209,26 @@ export function explainDrift(plan: PlanResult): {
   };
 }
 
-function createProviders(manifest: Awaited<ReturnType<typeof loadManifest>>["manifest"]): {
+function createProviders(
+  manifest: Awaited<ReturnType<typeof loadManifest>>["manifest"],
+  externals?: ExternalProviders
+): {
   kafka: KafkaProvider;
   schemaRegistry: SchemaRegistryProvider;
 } {
-  if (!manifest.kafka) {
-    throw new Error("manifest.kafka is required for plan/sync/status commands");
+  if (!externals?.kafka && !manifest.kafka) {
+    throw new Error(
+      "manifest.kafka is required when no external Kafka instance is provided"
+    );
   }
   if (!manifest.schemaRegistry) {
     throw new Error("manifest.schemaRegistry is required for plan/sync/status commands");
   }
   return {
-    kafka: new KafkaProvider(manifest.kafka),
+    // External instance takes precedence over manifest config.
+    kafka: externals?.kafka
+      ? new KafkaProvider(externals.kafka)
+      : new KafkaProvider(manifest.kafka!),
     schemaRegistry: new SchemaRegistryProvider(manifest.schemaRegistry)
   };
 }
