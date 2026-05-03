@@ -1,6 +1,6 @@
 {
   "name": "@rolled-potatoes/kafka-registry-sync",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Kafka topic and schema registry sync toolkit",
   "license": "UNLICENSED",
   "repository": {
